@@ -1,0 +1,299 @@
+{
+	"name": "azure-service-bus-explorer",
+	"displayName": "Azure Service Bus Explorer",
+	"description": "The Azure Service Bus Explorer",
+	"version": "0.0.1",
+	"engines": {
+		"vscode": "^1.33.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onView:queues",
+		"onView:topics"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "azure-service-bus",
+					"title": "Azure Service Bus",
+					"icon": "resources/icons/azure-service-bus.svg"
+				}
+			]
+		},
+		"views": {
+			"azure-service-bus": [
+				{
+					"id": "queues",
+					"name": "Queues"
+				},
+				{
+					"id": "topics",
+					"name": "Topics"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "queues.loadAll",
+				"title": "Refresh Queues",
+				"icon": {
+					"light": "resources/icons/light/refresh.svg",
+					"dark": "resources/icons/dark/refresh.svg"
+				}
+			},
+			{
+				"command": "queues.refresh",
+				"title": "Refresh Queue",
+				"icon": {
+					"light": "resources/icons/light/refresh.svg",
+					"dark": "resources/icons/dark/refresh.svg"
+				}
+			},
+			{
+				"command": "queues.create",
+				"title": "Create Queue",
+				"icon": {
+					"light": "resources/icons/light/create.svg",
+					"dark": "resources/icons/dark/create.svg"
+				}
+			},
+			{
+				"command": "queues.delete",
+				"title": "Delete Queue",
+				"icon": {
+					"light": "resources/icons/light/delete.svg",
+					"dark": "resources/icons/dark/delete.svg"
+				}
+			},
+			{
+				"command": "queues.view",
+				"title": "View Queue"
+			},
+			{
+				"command": "queues.peek",
+				"title": "Peek Queue"
+			},
+			{
+				"command": "queues.send",
+				"title": "Send Message to Queue"
+			},
+			{
+				"command": "queues.receive",
+				"title": "Recieve Messages from Queue"
+			},
+			{
+				"command": "topics.loadAll",
+				"title": "Refresh Topics",
+				"icon": {
+					"light": "resources/icons/light/refresh.svg",
+					"dark": "resources/icons/dark/refresh.svg"
+				}
+			},
+			{
+				"command": "topics.refresh",
+				"title": "Refresh Topic",
+				"icon": {
+					"light": "resources/icons/light/refresh.svg",
+					"dark": "resources/icons/dark/refresh.svg"
+				}
+			},
+			{
+				"command": "topics.create",
+				"title": "Create Topic",
+				"icon": {
+					"light": "resources/icons/light/create.svg",
+					"dark": "resources/icons/dark/create.svg"
+				}
+			},
+			{
+				"command": "topics.delete",
+				"title": "Delete Topic",
+				"icon": {
+					"light": "resources/icons/light/delete.svg",
+					"dark": "resources/icons/dark/delete.svg"
+				}
+			},
+			{
+				"command": "topics.view",
+				"title": "View Topic"
+			},
+			{
+				"command": "topics.send",
+				"title": "Send Message to Topic"
+			},
+			{
+				"command": "subscriptions.refresh",
+				"title": "Refresh Subscription",
+				"icon": {
+					"light": "resources/icons/light/refresh.svg",
+					"dark": "resources/icons/dark/refresh.svg"
+				}
+			},
+			{
+				"command": "subscriptions.create",
+				"title": "Create Subscription",
+				"icon": {
+					"light": "resources/icons/light/create.svg",
+					"dark": "resources/icons/dark/create.svg"
+				}
+			},
+			{
+				"command": "subscriptions.delete",
+				"title": "Delete Subscription",
+				"icon": {
+					"light": "resources/icons/light/delete.svg",
+					"dark": "resources/icons/dark/delete.svg"
+				}
+			},
+			{
+				"command": "subscriptions.view",
+				"title": "View Subscription"
+			},
+			{
+				"command": "queues.peek",
+				"title": "Peek Queue"
+			},
+			{
+				"command": "queues.receive",
+				"title": "Recieve Messages from Queue"
+			},
+			{
+				"command": "rules.refresh",
+				"title": "Refresh Rule",
+				"icon": {
+					"light": "resources/icons/light/refresh.svg",
+					"dark": "resources/icons/dark/refresh.svg"
+				}
+			},
+			{
+				"command": "rules.create",
+				"title": "Create Rule",
+				"icon": {
+					"light": "resources/icons/light/create.svg",
+					"dark": "resources/icons/dark/create.svg"
+				}
+			},
+			{
+				"command": "rules.delete",
+				"title": "Delete Rule",
+				"icon": {
+					"light": "resources/icons/light/delete.svg",
+					"dark": "resources/icons/dark/delete.svg"
+				}
+			},
+			{
+				"command": "rules.view",
+				"title": "View Rule"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "queues.loadAll",
+					"when": "view == queues",
+					"group": "navigation"
+				},
+				{
+					"command": "queues.create",
+					"when": "view == queues",
+					"group": "navigation"
+				},
+				{
+					"command": "topics.loadAll",
+					"when": "view == topics",
+					"group": "navigation"
+				},
+				{
+					"command": "topics.create",
+					"when": "view == topics",
+					"group": "navigation"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "queues.refresh",
+					"when": "view == queues && viewItem == queue",
+					"group": "inline"
+				},
+				{
+					"command": "queues.delete",
+					"when": "view == queues && viewItem == queue",
+					"group": "inline"
+				},
+				{
+					"command": "topics.refresh",
+					"when": "view == topics && viewItem == topic",
+					"group": "inline"
+				},
+				{
+					"command": "topics.delete",
+					"when": "view == topics && viewItem == topic",
+					"group": "inline"
+				},
+				{
+					"command": "subscriptions.create",
+					"when": "view == topics && viewItem == topic",
+					"group": "inline"
+				},
+				{
+					"command": "subscriptions.refresh",
+					"when": "view == topics && viewItem == subscription",
+					"group": "inline"
+				},
+				{
+					"command": "subscriptions.delete",
+					"when": "view == topics && viewItem == subscription",
+					"group": "inline"
+				},
+				{
+					"command": "rules.create",
+					"when": "view == topics && viewItem == subscription",
+					"group": "inline"
+				},
+				{
+					"command": "rules.refresh",
+					"when": "view == topics && viewItem == rule",
+					"group": "inline"
+				},
+				{
+					"command": "rules.delete",
+					"when": "view == topics && viewItem == rule",
+					"group": "inline"
+				}
+			]
+		},
+		"configuration": [
+			{
+				"title": "JSON Outline",
+				"properties": {
+					"jsonOutline.autorefresh": {
+						"type": "boolean",
+						"default": false
+					}
+				}
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"postinstall": "node ./node_modules/vscode/bin/install",
+		"test": "npm run compile && node ./node_modules/vscode/bin/test"
+	},
+	"devDependencies": {
+		"@types/azure-sb": "0.0.35",
+		"@types/mocha": "^2.2.42",
+		"@types/node": "^10.12.21",
+		"tslint": "^5.12.1",
+		"typescript": "^3.3.1",
+		"vscode": "^1.1.28"
+	},
+	"dependencies": {
+		"azure-sb": "^0.11.0"
+	}
+}
