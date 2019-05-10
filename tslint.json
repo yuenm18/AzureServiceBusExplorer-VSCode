@@ -18,5 +18,10 @@
 		"trailing-comma": true,
 		"no-var-keyword": true
 	},
-	"defaultSeverity": "warning"
+	"defaultSeverity": "warning",
+	"linterOptions": {
+		"exclude": [
+			"./node_modules/**"
+		]
+	}
 }

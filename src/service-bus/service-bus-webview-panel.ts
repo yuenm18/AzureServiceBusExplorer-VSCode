@@ -1,30 +1,51 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { Queue, Topic, Subscription, Rule, ServiceBusEntity } from './service-bus-models';
+import { ServiceBusEntity, ServiceBusEntityType, Message } from './service-bus-models';
 import { ServiceBusUtilities } from './service-bus-utilities';
 
 
-interface WebviewState {
-    entity: ServiceBusEntity;
-    messages: Message[];
-    uiState: any;
-    isActive: boolean;
-}
-
-interface Message {
+interface WebviewMessage {
     command: Command;
-    entity: ServiceBusEntity;
+    state: WebviewState;
+    data: any;
 }
 
-export enum Command {
-    Refresh = 'refresh',
+class WebviewState {
+    private static stateIdCounter = 0;
 
+    stateId: number;
+    messages: Message[];
+    deadLetterMessages: Message[];
+    uiState: { [key: string]: string };
+    isActive: boolean;
+    constructor(public type: ServiceBusEntityType, public entity: ServiceBusEntity) {
+        this.stateId = WebviewState.stateIdCounter++;
+        this.messages = [];
+        this.deadLetterMessages = [];
+        this.uiState = {};
+        this.isActive = true;
+    }
+}
+
+type Command = OutboundCommand | InboundCommand;
+
+enum OutboundCommand {
+    Refresh = 'refresh',
+}
+
+enum InboundCommand {
+    SetUI = 'set-ui',
+    SendMessage = 'send-message',
+    PeekMessages = 'peek-messages',
+    PeekDeadLetter = 'peek-messages',
 }
 
 /**
  * Service bus webview panel
  */
 export class ServiceBusWebviewPanel {
+    private states: WebviewState[] = [];
+
     private _webviewPanel: vscode.WebviewPanel | undefined;
     private get webviewPanel() {
         if (!this._webviewPanel) {
@@ -37,12 +58,11 @@ export class ServiceBusWebviewPanel {
                     localResourceRoots: [vscode.Uri.file(path.join(this.context.extensionPath, 'views'))]
                 });
 
-            this._webviewPanel.onDidChangeViewState(e => {
+            this._webviewPanel.onDidChangeViewState(async e => {
                 // save and restore webview
                 let panel = e.webviewPanel;
-                switch (panel.visible) {
-                    case true: this.restoreViewState(); break;
-                    case false: this.saveUIState(); break;
+                if (panel.visible) {
+                    this.restoreWebviewState();
                 }
 
             });
@@ -54,23 +74,38 @@ export class ServiceBusWebviewPanel {
                 null,
                 this.context.subscriptions);
 
+            this._webviewPanel.webview.onDidReceiveMessage(this.onReceivedMessageFromWebview, undefined, this.context.subscriptions);
+
             this.populateWebviewContent();
         }
 
         return this._webviewPanel;
     }
 
-    states: WebviewState[] = [];
 
     constructor(private context: vscode.ExtensionContext) { }
 
     /**
-     * Get the currently displayed service bus entity
+     * Displays an entity in the webview
+     * @param type The service bus entity type
+     * @param entity The service bus entity
      */
-    getDisplayedEntity(): ServiceBusEntity | undefined {
-        let activeState = this.states.find(s => s.isActive);
-        if (activeState) {
-            return activeState.entity;
+    showEntity(type: ServiceBusEntityType, entity: ServiceBusEntity) {
+        let state = this.getOrSaveState(type, entity);
+        this.displayState(state);
+    }
+
+    /**
+     * Updates the messages
+     * @param type The service bus entity type
+     * @param entity The service bus entity
+     * @param messages The messages
+     */
+    updateMessages(type: ServiceBusEntityType, entity: ServiceBusEntity, messages: Message[]) {
+        let state = this.states.find(s => ServiceBusUtilities.getEntityId(s.entity) === ServiceBusUtilities.getEntityId(entity));
+        if (state) {
+            state.messages = messages;
+            this.refreshWebview(type, entity);
         }
     }
 
@@ -78,11 +113,11 @@ export class ServiceBusWebviewPanel {
      * Refreshes the webview if any of the service bus entities are updated
      * @param entities The updated service bus entities
      */
-    refreshWebview(...entities: ServiceBusEntity[]) {
-        let visibleEntityId = ServiceBusUtilities.getEntityId(this.getDisplayedEntity());
-        let visibleEntity = entities.find(e => ServiceBusUtilities.getEntityId(e) === visibleEntityId);
+    refreshWebview(type: ServiceBusEntityType, ...entities: ServiceBusEntity[]) {
+        let activeEntityId = ServiceBusUtilities.getEntityId(this.getDisplayedEntity());
+        let visibleEntity = entities.find(e => ServiceBusUtilities.getEntityId(e) === activeEntityId);
         if (visibleEntity) {
-            this.displayEntity(visibleEntity);
+            this.showEntity(type, visibleEntity);
         }
     }
 
@@ -99,86 +134,125 @@ export class ServiceBusWebviewPanel {
         }
     }
 
-    saveUIState() {
-
-    }
-
     /**
-     * Displays entity in the webview
-     * @param entity The entity to refresh
+     * Handes messages sent from the webview
+     * @param message Message from webview
      */
-    displayEntity(entity: ServiceBusEntity) {
-        this.postMessage({
-            command: Command.Refresh,
-            entity: entity
-        });
-    }
-
-    /**
-     * Save the view state
-     * @param entity The entity to save
-     */
-    saveState(entity: ServiceBusEntity) {
-        this.states.forEach(s => s.isActive = false);
-        let state = this.states.find(s => ServiceBusUtilities.getEntityId(s.entity) === ServiceBusUtilities.getEntityId(entity));
+    private onReceivedMessageFromWebview = (message: WebviewMessage) => {
+        let state = this.states.find(s => s.stateId === message.state.stateId);
         if (!state) {
-            state = {
-                entity: entity,
-                messages: [],
-                uiState: {},
-                isActive: true
-            };
-            this.states.push(state);
+            console.error(`Could not find state id ${message.state.stateId}`);
+            return;
         }
-
-        state.entity = entity;
-        state.isActive = true;
-    }
-
-    restoreViewState() {
-        let entity = this.states.find(s => s.isActive);
-        // this.postMessage({
-        //     command: Command.refresh,
-        //     queue: entity
-        // });
-    }
-
-    /**
-     * Post a message to the webview
-     * @param message The message to send to the view
-     */
-    postMessage(message: Message) {
         switch (message.command) {
-            case Command.Refresh: {
-                this.saveState(message.entity);
+            case InboundCommand.SetUI: {
+                state.uiState = message.data;
+                break;
+            }
+            case InboundCommand.SendMessage: {
+                let messageToSend = message.data;
+                switch (state.type) {
+                    case ServiceBusEntityType.Queue: {
+                        vscode.commands.executeCommand('queues.send', state.entity, messageToSend);
+                        break;
+                    }
+                    case ServiceBusEntityType.Topic: {
+                        vscode.commands.executeCommand('topics.send', state.entity, messageToSend);
+                        break;
+                    }
+                }
+                break;
+            }
+            case InboundCommand.PeekMessages: {
+                let count = message.data;
+                switch (state.type) {
+                    case ServiceBusEntityType.Queue: {
+                        vscode.commands.executeCommand('queues.peek', state.entity, count);
+                        break;
+                    }
+                    case ServiceBusEntityType.Subscription: {
+                        vscode.commands.executeCommand('subscriptions.peek', state.entity, count);
+                        break;
+                    }
+                }
+                break;
+            }
+            case InboundCommand.SetUI: {
+                state.uiState = message.data;
+                break;
+            }
+            default: {
+                console.error(`Invalid command from webview ${message.command}`);
                 break;
             }
         }
-
-        this.webviewPanel.webview.postMessage(message);
-    }
-
-    viewQueue(queue: Queue) {
-
-    }
-
-    viewTopic(topic: Topic) {
-
-    }
-
-    viewSubscription(subscription: Subscription) {
-
-    }
-
-    viewRule(rule: Rule) {
-
     }
 
     /**
-     * sets webview content
+     * Displays the active state
+     */
+    private restoreWebviewState() {
+        let currentState = this.states.find(s => s.isActive);
+        if (currentState) {
+            this.displayState(currentState);
+        }
+    }
+
+    /**
+     * Displays the state in the webview
+     * @param state The state to display
+     */
+    private displayState(state: WebviewState) {
+        let refreshMessage = {
+            command: OutboundCommand.Refresh,
+            state: state
+        };
+
+        this.webviewPanel.webview.postMessage(refreshMessage);
+    }
+
+    /**
+     * Gets an existing state or saves the entity into a new state and returns it
+     * @param type The service bus type
+     * @param entity The service bus entity
+     */
+    private getOrSaveState(type: ServiceBusEntityType, entity: ServiceBusEntity) {
+        this.states.forEach(s => s.isActive = false);
+        let state = this.states.find(s => ServiceBusUtilities.getEntityId(s.entity) === ServiceBusUtilities.getEntityId(entity));
+        if (!state) {
+            state = new WebviewState(type, entity);
+            this.states.push(state);
+        }
+
+        state.type = type;
+        state.entity = entity;
+        state.isActive = true;
+        return state;
+    }
+
+    /**
+     * Gets the current displayed entity
+     */
+    private getDisplayedEntity(): ServiceBusEntity | undefined {
+        let activeState = this.getActiveState();
+        if (activeState) {
+            return activeState.entity;
+        }
+    }
+
+    /**
+     * Gets the active state
+     */
+    private getActiveState(): WebviewState | undefined {
+        return this.states.find(s => s.isActive);
+    }
+
+    /**
+     * Sets webview content
      */
     private populateWebviewContent() {
-        let jsFile = path.join(__filename, '..', '..', '..', 'views', 'view.js');
+        let jsFile = path.join(__filename, '..', '..', '..', 'views', 'main.js');
+        let cssFile = path.join(__filename, '..', '..', '..', 'views', 'styles.css');
         this.webviewPanel.webview.html = `
 <!DOCTYPE html>
 <html>
@@ -186,11 +260,20 @@ export class ServiceBusWebviewPanel {
         <meta charset="UTF-8">
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src vscode-resource:; style-src vscode-resource:;">
         <meta name="viewpoint" context="width=device-width, initial-scale=1.0">
+        <script async type="module" src="vscode-resource:${jsFile}"></script>
+        <link rel="stylesheet" href="vscode-resource:${cssFile}"></link>
 	</head>
     <body>
+        <header class="header-section"></header>
+        <main class="main-container">
+            <aside class="details-section"></aside>
+            <article class="messages-container">
+                <section class="view-messages-section"></section>
+                <section class="send-messages-section"></section>
+            </article>
+        </main>
         <pre></pre>
     </body>
-    <script src="vscode-resource:${jsFile}"></script>
 </html>
 `;
     }

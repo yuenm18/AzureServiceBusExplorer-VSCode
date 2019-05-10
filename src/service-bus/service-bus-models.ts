@@ -1,6 +1,7 @@
 import { Azure } from 'azure-sb';
 import { QueueTreeItem } from '../queues/queue-provider';
 import { TopicTreeItem, SubscriptionTreeItem, RuleTreeItem } from '../topics/topic-provider';
+import { SendableMessageInfo } from '@azure/service-bus';
 
 export class ServiceBusNamespace {
     constructor(
@@ -20,7 +21,7 @@ export interface Topic extends Azure.ServiceBus.Results.Models.Topic {
     TopicTreeItem: TopicTreeItem;
 }
 
-export interface Subscription extends Azure.ServiceBus.Results.Models.Subscription { 
+export interface Subscription extends Azure.ServiceBus.Results.Models.Subscription {
     SubscriptionTreeItem: SubscriptionTreeItem;
 }
 
@@ -28,7 +29,9 @@ export interface Rule extends Azure.ServiceBus.Results.Models.Rule {
     RuleTreeItem: RuleTreeItem;
 }
 
-export enum ServiceBusType {
+export interface Message extends SendableMessageInfo { }
+
+export enum ServiceBusEntityType {
     Queue = 'Queue',
     Topic = 'Topic',
     Subscription = 'Subscription',

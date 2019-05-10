@@ -13,7 +13,7 @@ export class TopicUtilities {
                 label: 'Max Size in Megabytes',
                 propertyDescription: 'Specifies the maximum topic size in megabytes. Any attempt to enqueue a message that will cause the topic to exceed this value will fail. All messages that are stored in the topic or any of its subscriptions count towards this value. Multiple copies of a message that reside in one or multiple subscriptions count as a single messages. For example, if message m exists once in subscription s1 and twice in subscription s2, m is counted as a single message.',
                 detail: undefined,
-                property: 'MaxSizeInMegaBytes',
+                property: 'MaxSizeInMegabytes',
                 validate: (value: string) => {
                     if (!(+value >= 0)) {
                         return 'Value must be a whole number';

@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceBusType, ServiceBusEntity } from './service-bus-models';
+import { ServiceBusEntityType, ServiceBusEntity } from './service-bus-models';
 import { URL } from 'url';
 
 
@@ -22,7 +22,7 @@ export class ServiceBusUtilities {
      * @param existingNames Names that already exist (used for duplicate detection)
      * @param type The service bus type
      */
-    static showCreateNameInput(existingNames: string[], type: ServiceBusType): Promise<string> {
+    static showCreateNameInput(existingNames: string[], type: ServiceBusEntityType): Promise<string> {
         return new Promise(async (resolve, reject) => {
             let name = await vscode.window.showInputBox({
                 placeHolder: `${type} Name`,
@@ -53,7 +53,7 @@ export class ServiceBusUtilities {
      * @param name Name of the queue
      * @param type The service bus type
      */
-    static showCreateOptionsSelector<CreateOptions>(createOptions: CreateQuickPickItems[], name: string, type: ServiceBusType): Promise<CreateOptions> {
+    static showCreateOptionsSelector<CreateOptions>(createOptions: CreateQuickPickItems[], name: string, type: ServiceBusEntityType): Promise<CreateOptions> {
         return new Promise((resolve, reject) => {
             // whether or not hiding the quick pick is due to opening the  
             let openingChangeSelectionInput = false;
@@ -126,7 +126,7 @@ export class ServiceBusUtilities {
      * @param name The name of the entity
      * @param type The service bus type
      */
-    static showConfirmDelete(name: string, type: ServiceBusType): Promise<string> {
+    static showConfirmDelete(name: string, type: ServiceBusEntityType): Promise<string> {
         return new Promise(async (resolve, reject) => {
             let result = await vscode.window.showQuickPick(['Yes', 'No'], {
                 placeHolder: `Are you sure you want to delete '${name}'?`,

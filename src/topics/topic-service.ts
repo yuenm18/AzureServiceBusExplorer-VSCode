@@ -5,8 +5,8 @@ import CreateSubscriptionOptions = Azure.ServiceBus.CreateSubscriptionOptions;
 import CreateRuleOptions = Azure.ServiceBus.CreateRuleOptions;
 import { TopicTreeDataProvider, TopicTreeItem, SubscriptionTreeItem, RuleTreeItem } from './topic-provider';
 import { ServiceBusWebviewPanel } from '../service-bus/service-bus-webview-panel';
-import { ServiceBusServicePromise } from '../service-bus/service-bus-service-promise';
-import { ServiceBusNamespace, Topic, ServiceBusType, Subscription, Rule } from '../service-bus/service-bus-models';
+import { ServiceBusApi } from '../service-bus/service-bus-api';
+import { ServiceBusNamespace, Topic, ServiceBusEntityType, Subscription, Rule, Message } from '../service-bus/service-bus-models';
 import { TopicUtilities } from './topic-utilities';
 import { ServiceBusUtilities } from '../service-bus/service-bus-utilities';
 
@@ -19,7 +19,7 @@ export class TopicService {
 
 	constructor(
 		private serviceBusNamespace: ServiceBusNamespace,
-		private serviceBusService: ServiceBusServicePromise,
+		private serviceBusApi: ServiceBusApi,
 		private webviewPanel: ServiceBusWebviewPanel) {
 
 		this.listTopics();
@@ -37,12 +37,12 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// gets the topics
-				let topics = <Topic[]>await this.serviceBusService.listTopicsPromise({});
+				let topics = <Topic[]>await this.serviceBusApi.listTopics({});
 				topics.forEach(t => t.TopicTreeItem = new TopicTreeItem(t));
 				this.serviceBusNamespace.topics = topics;
 				
 				// update UI
-				this.webviewPanel.refreshWebview(...topics);
+				this.webviewPanel.refreshWebview(ServiceBusEntityType.Topic, ...topics);
 				this.treeDataProvider.refresh();
 
 				// refresh all subscriptions of that topic
@@ -65,7 +65,7 @@ export class TopicService {
 			location: vscode.ProgressLocation.Window
 		}, async (progress, token) => {
 			try {
-				let refreshedTopic = <Topic>await this.serviceBusService.getTopicPromise(topic.TopicName);
+				let refreshedTopic = <Topic>await this.serviceBusApi.getTopic(topic.TopicName);
 				refreshedTopic.TopicTreeItem = new TopicTreeItem(refreshedTopic);
 				let topicIndex = this.serviceBusNamespace.topics.findIndex(t => t.TopicName === topic.TopicName);
 				if (topicIndex > -1) {
@@ -73,7 +73,7 @@ export class TopicService {
 				}
 
 				// update UI
-				this.webviewPanel.refreshWebview(refreshedTopic);
+				this.webviewPanel.refreshWebview(ServiceBusEntityType.Topic, refreshedTopic);
 				this.treeDataProvider.refresh();
 
 				// refresh all subscriptions of that topic
@@ -92,9 +92,9 @@ export class TopicService {
 	async createTopic() {
 		try {
 			// prompt for topic name and topic options, then create topic
-			let topicName = await ServiceBusUtilities.showCreateNameInput(this.serviceBusNamespace.topics.map(t => t.TopicName), ServiceBusType.Topic);
+			let topicName = await ServiceBusUtilities.showCreateNameInput(this.serviceBusNamespace.topics.map(t => t.TopicName), ServiceBusEntityType.Topic);
 			let topicCreateOptions = TopicUtilities.getDefaultTopicCreateOptions();
-			let createTopicOptions = await ServiceBusUtilities.showCreateOptionsSelector<CreateTopicOptions>(topicCreateOptions, topicName, ServiceBusType.Topic);
+			let createTopicOptions = await ServiceBusUtilities.showCreateOptionsSelector<CreateTopicOptions>(topicCreateOptions, topicName, ServiceBusEntityType.Topic);
 
 			await this.sendCreateTopicRequest(topicName, createTopicOptions);
 		} catch (error) {
@@ -114,7 +114,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// create topic
-				let createdTopic = <Topic>await this.serviceBusService.createTopicPromise(<string>topicName, topicCreateOptions);
+				let createdTopic = <Topic>await this.serviceBusApi.createTopic(<string>topicName, topicCreateOptions);
 				createdTopic.TopicTreeItem = new TopicTreeItem(createdTopic);
 
 				// put topic into the in memory list
@@ -138,7 +138,7 @@ export class TopicService {
 	async deleteTopic(topic: Topic) {
 		try {
 			// show a confirm delete dialog and delete the topic if the user confirms
-			let confirmDelete = await ServiceBusUtilities.showConfirmDelete(topic.TopicName, ServiceBusType.Topic);
+			let confirmDelete = await ServiceBusUtilities.showConfirmDelete(topic.TopicName, ServiceBusEntityType.Topic);
 			if (confirmDelete) {
 				await this.sendDeleteTopicRequest(topic);
 			}
@@ -158,7 +158,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// delete topic
-				await this.serviceBusService.deleteTopicPromise(topic.TopicName);
+				await this.serviceBusApi.deleteTopic(topic.TopicName);
 
 				// spice topic out of the list
 				let topicIndex = this.serviceBusNamespace.topics.findIndex(t => t.TopicName === topic.TopicName);
@@ -183,7 +183,22 @@ export class TopicService {
 	 * @param topic The topic to view
 	 */
 	viewTopic(topic: Topic) {
-		this.webviewPanel.displayEntity(topic);
+		this.webviewPanel.showEntity(ServiceBusEntityType.Topic, topic);
+	}
+	
+	async sendTopicMessage(topic: Topic, message: Message) {
+		vscode.window.withProgress({
+			title: `Sending Message to '${topic.TopicName}'`,
+			location: vscode.ProgressLocation.Window
+		}, async (progress, token) => {
+			try {
+				await this.serviceBusApi.sendTopicMessage(topic, message);
+				vscode.window.showInformationMessage(`Message sent to '${topic.TopicName}' successfully`);
+			} catch (error) {
+				console.warn(error);
+				vscode.window.showErrorMessage(error.message);				
+			}
+		});
 	}
 
 
@@ -198,7 +213,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// gets the subscriptions belonging to the topic
-				let subscriptionsForTopic = <Subscription[]>await this.serviceBusService.listSubscriptionsPromise(topic.TopicName, {});
+				let subscriptionsForTopic = <Subscription[]>await this.serviceBusApi.listSubscriptions(topic.TopicName, {});
 				subscriptionsForTopic.forEach(s => s.SubscriptionTreeItem = new SubscriptionTreeItem(s));
 
 				// filter out existing subscriptions belonging to the topic and push on the updated subscriptions
@@ -206,7 +221,7 @@ export class TopicService {
 				this.serviceBusNamespace.subscriptions.push(...subscriptionsForTopic);
 
 				// update UI
-				this.webviewPanel.refreshWebview(...subscriptionsForTopic);
+				this.webviewPanel.refreshWebview(ServiceBusEntityType.Subscription, ...subscriptionsForTopic);
 				this.treeDataProvider.refresh();
 
 				// refresh all rules that belong to the subscription
@@ -230,7 +245,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// refresh subscription
-				let refreshedSubscription = <Subscription>await this.serviceBusService.getSubscriptionPromise(subscription.TopicName, subscription.SubscriptionName);
+				let refreshedSubscription = <Subscription>await this.serviceBusApi.getSubscription(subscription.TopicName, subscription.SubscriptionName);
 				refreshedSubscription.SubscriptionTreeItem = new SubscriptionTreeItem(refreshedSubscription);
 
 				// splice in refreshed subscription
@@ -240,7 +255,7 @@ export class TopicService {
 				}
 
 				// update UI
-				this.webviewPanel.refreshWebview(refreshedSubscription);
+				this.webviewPanel.refreshWebview(ServiceBusEntityType.Subscription, refreshedSubscription);
 				this.treeDataProvider.refresh();
 
 				// refresh all rules that belong to the subscription
@@ -260,9 +275,9 @@ export class TopicService {
 	async createSubscription(topic: Topic) {
 		try {
 			// prompt for subscription name and subscription options, then create subscription
-			let subscriptionName = await ServiceBusUtilities.showCreateNameInput(this.serviceBusNamespace.subscriptions.filter(s => s.TopicName === topic.TopicName).map(s => s.SubscriptionName), ServiceBusType.Subscription);
+			let subscriptionName = await ServiceBusUtilities.showCreateNameInput(this.serviceBusNamespace.subscriptions.filter(s => s.TopicName === topic.TopicName).map(s => s.SubscriptionName), ServiceBusEntityType.Subscription);
 			let subscriptionCreateOptions = TopicUtilities.getDefaultSubscriptionCreateOptions();
-			let createSubscriptionOptions = await ServiceBusUtilities.showCreateOptionsSelector<CreateTopicOptions>(subscriptionCreateOptions, subscriptionName, ServiceBusType.Subscription);
+			let createSubscriptionOptions = await ServiceBusUtilities.showCreateOptionsSelector<CreateTopicOptions>(subscriptionCreateOptions, subscriptionName, ServiceBusEntityType.Subscription);
 
 			await this.sendCreateSubscriptionRequest(topic.TopicName, subscriptionName, createSubscriptionOptions);
 		} catch (error) {
@@ -283,7 +298,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// create subscription
-				let createdSubscription = <Subscription>await this.serviceBusService.createSubscriptionPromise(topicName, subscriptionName, subscriptionCreateOptions);
+				let createdSubscription = <Subscription>await this.serviceBusApi.createSubscription(topicName, subscriptionName, subscriptionCreateOptions);
 				createdSubscription.SubscriptionTreeItem = new SubscriptionTreeItem(createdSubscription);
 				
 				// put the subscription into the in memory list
@@ -306,7 +321,7 @@ export class TopicService {
 	 */
 	async deleteSubscription(subscription: Subscription) {
 		try {
-			let confirmDelete = await ServiceBusUtilities.showConfirmDelete(subscription.SubscriptionName, ServiceBusType.Subscription);
+			let confirmDelete = await ServiceBusUtilities.showConfirmDelete(subscription.SubscriptionName, ServiceBusEntityType.Subscription);
 			if (confirmDelete) {
 				await this.sendDeleteSubscriptionRequest(subscription);
 			}
@@ -326,7 +341,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// delete subscription
-				await this.serviceBusService.deleteSubscriptionPromise(subscription.TopicName, subscription.SubscriptionName);
+				await this.serviceBusApi.deleteSubscription(subscription.TopicName, subscription.SubscriptionName);
 
 				// spice subscription out of the list
 				let subscriptionIndex = this.serviceBusNamespace.subscriptions.findIndex(s => s.TopicName === subscription.TopicName && s.SubscriptionName === subscription.SubscriptionName);
@@ -351,7 +366,27 @@ export class TopicService {
 	 * @param subscription The subscription to view
 	 */
 	viewSubscription(subscription: Subscription) {
-		this.webviewPanel.displayEntity(subscription);
+		this.webviewPanel.showEntity(ServiceBusEntityType.Subscription, subscription);
+	}
+
+	/**
+	 * Peeks messages from a subscription
+	 * @param subscription The subscription
+	 * @param count The number of messages to peek
+	 */
+	async peekSubscriptionMessages(subscription: Subscription, count?: number) {
+		vscode.window.withProgress({
+			title: `Peeking ${count !== undefined ? count + ' ': ''}message${count === 1 ? '' : 's'} from '${subscription.SubscriptionName}'`,
+			location: vscode.ProgressLocation.Window
+		}, async (progress, token) => {
+			try {
+				let messages = await this.serviceBusApi.peekSubscriptionMessages(subscription, count);
+				this.webviewPanel.updateMessages(ServiceBusEntityType.Subscription, subscription, messages);
+			} catch (error) {
+				console.warn(error);
+				vscode.window.showErrorMessage(error.message);				
+			}
+		});
 	}
 
 
@@ -366,7 +401,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// get the subscriptions
-				let rulesForSubscription = <Rule[]>await this.serviceBusService.listRulesPromise(subscription.TopicName, subscription.SubscriptionName, {});
+				let rulesForSubscription = <Rule[]>await this.serviceBusApi.listRules(subscription.TopicName, subscription.SubscriptionName, {});
 				rulesForSubscription.forEach(r => r.RuleTreeItem = new RuleTreeItem(r));
 
 				// filter out existing rules that belong to the subscription and add the refreshed ones
@@ -374,7 +409,7 @@ export class TopicService {
 				this.serviceBusNamespace.rules.push(...rulesForSubscription);
 
 				// update UI
-				this.webviewPanel.refreshWebview(...rulesForSubscription);
+				this.webviewPanel.refreshWebview(ServiceBusEntityType.Rule, ...rulesForSubscription);
 				this.treeDataProvider.refresh();
 			}
 			catch (error) {
@@ -395,7 +430,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// refresh rule
-				let refreshedRule = <Rule>await this.serviceBusService.getRulePromise(rule.TopicName, rule.SubscriptionName, rule.RuleName);
+				let refreshedRule = <Rule>await this.serviceBusApi.getRule(rule.TopicName, rule.SubscriptionName, rule.RuleName);
 				refreshedRule.RuleTreeItem = new RuleTreeItem(refreshedRule);
 
 				// splice in refreshed rule
@@ -405,7 +440,7 @@ export class TopicService {
 				}
 
 				// update UI
-				this.webviewPanel.refreshWebview(refreshedRule);
+				this.webviewPanel.refreshWebview(ServiceBusEntityType.Rule, refreshedRule);
 				this.treeDataProvider.refresh();
 			}
 			catch (error) {
@@ -422,9 +457,9 @@ export class TopicService {
 	async createRule(subscription: Subscription) {
 		try {
 			// prompt for rule name and rule options, then create rule
-			let ruleName = await ServiceBusUtilities.showCreateNameInput(this.serviceBusNamespace.rules.filter(r => r.TopicName === subscription.TopicName && r.SubscriptionName === subscription.SubscriptionName).map(r => r.RuleName), ServiceBusType.Rule);
+			let ruleName = await ServiceBusUtilities.showCreateNameInput(this.serviceBusNamespace.rules.filter(r => r.TopicName === subscription.TopicName && r.SubscriptionName === subscription.SubscriptionName).map(r => r.RuleName), ServiceBusEntityType.Rule);
 			let ruleCreateOptions = TopicUtilities.getDefaultRuleCreateOptions();
-			let createRuleOptions = await ServiceBusUtilities.showCreateOptionsSelector<CreateRuleOptions>(ruleCreateOptions, ruleName, ServiceBusType.Rule);
+			let createRuleOptions = await ServiceBusUtilities.showCreateOptionsSelector<CreateRuleOptions>(ruleCreateOptions, ruleName, ServiceBusEntityType.Rule);
 
 			await this.sendCreateRuleRequest(subscription.TopicName, subscription.SubscriptionName, ruleName, createRuleOptions);
 		} catch (error) {
@@ -446,7 +481,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// create rule
-				let createdRule = <Rule>await this.serviceBusService.createRulePromise(topicName, subscriptionName, ruleName, ruleCreateOptions);
+				let createdRule = <Rule>await this.serviceBusApi.createRule(topicName, subscriptionName, ruleName, ruleCreateOptions);
 				createdRule.RuleTreeItem = new RuleTreeItem(createdRule);
 
 				// push rule into the in memory list
@@ -470,7 +505,7 @@ export class TopicService {
 	async deleteRule(rule: Rule) {
 		try {
 			// show a confirm delete dialog and delete the rule if the user confirms
-			let confirmDelete = await ServiceBusUtilities.showConfirmDelete(rule.RuleName, ServiceBusType.Rule);
+			let confirmDelete = await ServiceBusUtilities.showConfirmDelete(rule.RuleName, ServiceBusEntityType.Rule);
 			if (confirmDelete) {
 				await this.sendDeleteRuleRequest(rule);
 			}
@@ -490,7 +525,7 @@ export class TopicService {
 		}, async (progress, token) => {
 			try {
 				// delete rule
-				await this.serviceBusService.deleteRulePromise(rule.TopicName, rule.SubscriptionName, rule.RuleName);
+				await this.serviceBusApi.deleteRule(rule.TopicName, rule.SubscriptionName, rule.RuleName);
 				
 				// splice rule out of list
 				let ruleIndex = this.serviceBusNamespace.rules.findIndex(r => r.TopicName === rule.TopicName && r.SubscriptionName === rule.SubscriptionName && r.RuleName === rule.RuleName);
@@ -515,6 +550,6 @@ export class TopicService {
 	 * @param rule The rule to view
 	 */
 	viewRule(rule: Rule) {
-		this.webviewPanel.displayEntity(rule);
+		this.webviewPanel.showEntity(ServiceBusEntityType.Rule, rule);
 	}
 }

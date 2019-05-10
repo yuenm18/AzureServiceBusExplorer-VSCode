@@ -13,7 +13,7 @@ export class QueueUtilities {
                 label: 'Max Size in Megabytes',
                 propertyDescription: 'Specifies the maximum queue size in megabytes. Any attempt to enqueue a message that will cause the queue to exceed this value will fail.',
                 detail: undefined,
-                property: 'MaxSizeInMegaBytes',
+                property: 'MaxSizeInMegabytes',
                 validate: (value: string) => {
                     if (!(+value >= 0)) {
                         return 'Value must be a whole number';

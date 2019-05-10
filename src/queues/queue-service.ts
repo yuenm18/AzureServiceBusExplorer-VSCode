@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { Azure } from 'azure-sb';
 import CreateQueueOptions = Azure.ServiceBus.CreateQueueOptions;
 import { QueueTreeDataProvider, QueueTreeItem } from './queue-provider';
-import { ServiceBusNamespace, Queue, ServiceBusType } from '../service-bus/service-bus-models';
-import { ServiceBusServicePromise } from '../service-bus/service-bus-service-promise';
+import { ServiceBusNamespace, Queue, ServiceBusEntityType, Message } from '../service-bus/service-bus-models';
+import { ServiceBusApi } from '../service-bus/service-bus-api';
 import { ServiceBusWebviewPanel } from '../service-bus/service-bus-webview-panel';
 import { ServiceBusUtilities } from '../service-bus/service-bus-utilities';
 import { QueueUtilities } from './queue-utilities';
@@ -17,7 +17,7 @@ export class QueueService {
 
 	constructor(
 		private serviceBusNamespace: ServiceBusNamespace,
-		private serviceBusService: ServiceBusServicePromise,
+		private serviceBusApi: ServiceBusApi,
 		private webviewPanel: ServiceBusWebviewPanel) {
 
 		this.listQueues();
@@ -34,12 +34,12 @@ export class QueueService {
 		}, async (progress, token) => {
 			try {
 				// get the queues
-				let queues = <Queue[]>await this.serviceBusService.listQueuesPromise({});
+				let queues = <Queue[]>await this.serviceBusApi.listQueues({});
 				queues.forEach(q => q.QueueTreeItem = new QueueTreeItem(q));
 				this.serviceBusNamespace.queues = queues;
 
 				// update UI
-				this.webviewPanel.refreshWebview(...queues);
+				this.webviewPanel.refreshWebview(ServiceBusEntityType.Queue, ...queues);
 				this.treeDataProvider.refresh();
 			}
 			catch (error) {
@@ -60,7 +60,7 @@ export class QueueService {
 		}, async (progress, token) => {
 			try {
 				// refresh queue
-				let refreshedQueue = <Queue>await this.serviceBusService.getQueuePromise(queue.QueueName);
+				let refreshedQueue = <Queue>await this.serviceBusApi.getQueue(queue.QueueName);
 				refreshedQueue.QueueTreeItem = new QueueTreeItem(refreshedQueue);
 
 				// splice in refreshed queue
@@ -70,7 +70,7 @@ export class QueueService {
 				}
 
 				// update UI
-				this.webviewPanel.refreshWebview(refreshedQueue);
+				this.webviewPanel.refreshWebview(ServiceBusEntityType.Queue, refreshedQueue);
 				this.treeDataProvider.refresh();
 			}
 			catch (error) {
@@ -86,9 +86,9 @@ export class QueueService {
 	async createQueue() {
 		try {
 			// prompt for queue name and queue options, then create queue
-			let queueName = await ServiceBusUtilities.showCreateNameInput(this.serviceBusNamespace.queues.map(q => q.QueueName), ServiceBusType.Queue);
+			let queueName = await ServiceBusUtilities.showCreateNameInput(this.serviceBusNamespace.queues.map(q => q.QueueName), ServiceBusEntityType.Queue);
 			let queueCreateOptions = QueueUtilities.getDefaultQueueCreateOptions();
-			let createQueueOptions = await ServiceBusUtilities.showCreateOptionsSelector<CreateQueueOptions>(queueCreateOptions, queueName, ServiceBusType.Queue);
+			let createQueueOptions = await ServiceBusUtilities.showCreateOptionsSelector<CreateQueueOptions>(queueCreateOptions, queueName, ServiceBusEntityType.Queue);
 
 			await this.sendCreateQueueRequest(queueName, createQueueOptions);
 		} catch (e) {
@@ -108,7 +108,7 @@ export class QueueService {
 		}, async (progress, token) => {
 			try {
 				// create queue
-				let newQueue = <Queue>await this.serviceBusService.createQueuePromise(<string>queueName, queueCreateOptions);
+				let newQueue = <Queue>await this.serviceBusApi.createQueue(<string>queueName, queueCreateOptions);
 				newQueue.QueueTreeItem = new QueueTreeItem(newQueue);
 
 				// put queue into the in memory list
@@ -132,7 +132,7 @@ export class QueueService {
 	async deleteQueue(queue: Queue) {
 		try {
 			// show a confirm delete dialog and delete the queue if the user confirms
-			let confirmDelete = await ServiceBusUtilities.showConfirmDelete(queue.QueueName, ServiceBusType.Queue);
+			let confirmDelete = await ServiceBusUtilities.showConfirmDelete(queue.QueueName, ServiceBusEntityType.Queue);
 			if (confirmDelete) {
 				await this.sendDeleteQueueRequest(queue);
 			}
@@ -152,7 +152,7 @@ export class QueueService {
 		}, async (progress, token) => {
 			try {
 				// delete queue
-				await this.serviceBusService.deleteQueuePromise(queue.QueueName);
+				await this.serviceBusApi.deleteQueue(queue.QueueName);
 
 				// splice queue out of list
 				let queueIndex = this.serviceBusNamespace.queues.findIndex(q => q.QueueName === queue.QueueName);
@@ -177,6 +177,46 @@ export class QueueService {
 	 * @param queue The queue to view
 	 */
 	viewQueue(queue: Queue) {
-		this.webviewPanel.displayEntity(queue);
+		this.webviewPanel.showEntity(ServiceBusEntityType.Queue, queue);
+	}
+
+	/**
+	 * Sends a message onto a queue
+	 * @param queue The queue to send the message to
+	 * @param message The message
+	 */
+	async sendQueueMessage(queue: Queue, message: Message) {
+		vscode.window.withProgress({
+			title: `Sending Message to '${queue.QueueName}`,
+			location: vscode.ProgressLocation.Window
+		}, async (progress, token) => {
+			try {
+				await this.serviceBusApi.sendQueueMessage(queue, message);
+				vscode.window.showInformationMessage(`Message sent to '${queue.QueueName}' successfully`);
+			} catch (error) {
+				console.warn(error);
+				vscode.window.showErrorMessage(error.message);				
+			}
+		});
+	}
+
+	/**
+	 * Peeks messages from a queue
+	 * @param queue The queue
+	 * @param count The maximum number of messages to peek
+	 */
+	async peekQueueMessages(queue: Queue, count?: number) {
+		vscode.window.withProgress({
+			title: `Peeking ${count !== undefined ? count + ' ': ''}message${count === 1 ? '' : 's'} from '${queue.QueueName}'`,
+			location: vscode.ProgressLocation.Window
+		}, async (progress, token) => {
+			try {
+				let messages = await this.serviceBusApi.peekQueueMessages(queue, count);
+				this.webviewPanel.updateMessages(ServiceBusEntityType.Queue, queue, messages);
+			} catch (error) {
+				console.warn(error);
+				vscode.window.showErrorMessage(error.message);				
+			}
+		});
 	}
 }

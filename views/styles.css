@@ -1,0 +1,291 @@
+/* Main Layout */
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.main-container {
+    display: flex;
+    flex-flow: row wrap;
+}
+
+.messages-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.rule-filter {
+    margin: auto;
+    padding: 25px;
+    width: 50vh;
+    border: 1px solid;
+    text-align: center;
+}
+
+/* Common element styles */
+
+button {
+    border-color: var(--vscode-input-background);
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    padding: 10px;
+}
+
+input {
+    background-color: var(--vscode-settings-textInputBackground);
+    color: var(--vscode-settings-textInputForeground);
+    padding: 10px;
+}
+
+pre {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* Service bus details section */
+
+service-bus-details {
+    --details-table-width: 750px;
+}
+
+service-bus-details .details-table {
+    margin: 125px 25px 0;
+}
+
+service-bus-details .details-header {
+    padding-right: 25px;
+    text-align: left;
+}
+
+/* Service bus message table */
+
+service-bus-message-table {
+    --message-table-size: 750px;
+    --message-table-content-height: 500px;
+    margin: 25px;
+    position: relative;
+}
+
+service-bus-message-table h3 {
+    text-align: center;
+    margin: 25px;
+}
+
+service-bus-message-table table.message-table {
+    margin-top: 10px;
+    width: var(--message-table-size);
+    border: 1px solid;
+    border-collapse: collapse;
+    background-color: var(--vscode-editorSuggestWidget-background);
+}
+
+service-bus-message-table table.message-table thead, service-bus-message-table .message-table table{
+    display: table;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+}
+
+service-bus-message-table table.message-table tbody {
+    display: block;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: var(--message-table-content-height);
+    position: relative
+}
+
+service-bus-message-table table.message-table tbody tr{
+    cursor: pointer;
+}
+
+service-bus-message-table .message-table tbody tr:nth-child(even){
+    background-color: var(--vscode-textBlockQuote-background);
+}
+
+service-bus-message-table table.message-table thead tr {
+    background-color: var(--vscode-editorSuggestWidget-background);
+}
+
+service-bus-message-table table.message-table td, service-bus-message-table .message-table th {
+    border-bottom: 1px solid;
+    padding: 5px;
+    text-align: center;
+}
+
+service-bus-message-table table.message-table th {
+    border-bottom-width: 3px;
+}
+
+service-bus-message-table table.message-table p.message-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+service-bus-message-table table.message-table em {
+    display: block;
+    text-align: center;
+    padding: 25px;
+}
+
+service-bus-message-table .message-dialog-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+service-bus-message-table .message-dialog-container .message-dialog {
+    height: 500px;
+    width: 500px;
+    background-color: var(--vscode-editorPane-background);
+    border: 1px solid;
+    border-radius: 10px;
+    padding: 50px 25px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+service-bus-message-table .message-dialog-container .message-dialog .message-details > * {
+    padding: 5px;
+}   
+
+service-bus-message-table .message-dialog-container .message-dialog .message-main > section {
+    margin: 25px;
+}
+
+service-bus-message-table .message-dialog-container .message-dialog .message-main > section {
+    box-sizing: border-box;
+    margin: 10px;
+    width: 50%;
+}
+
+service-bus-message-table .message-dialog-container .message-dialog .message-main {
+    display: flex;
+}
+
+service-bus-message-table .message-dialog-container .message-dialog .message-main h5 {
+    text-align: center;
+}
+
+service-bus-message-table .message-dialog-container .message-dialog .message-main > section > *:nth-child(2) {
+    box-sizing: border-box;
+    border: 1px solid;
+    height: 250px;
+    overflow-y: auto;
+    margin: 10px;
+}
+
+service-bus-message-table .message-dialog-container .message-dialog .message-main section pre {
+    padding: 10px;
+}
+
+service-bus-message-table .message-dialog-container .message-dialog .message-main section table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+service-bus-message-table .message-dialog-container .message-dialog .message-main section table * {
+    word-break: break-word;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    width: 50%;
+    height: 25px;
+    padding: 5px;
+    text-align: left;
+    border-left: 1px solid;
+    border-bottom: 1px solid;
+}
+
+.spinner {
+    --spinner-size: 120px;
+    position: absolute;
+    box-sizing: border-box;
+    left: calc((var(--message-table-size) - var(--spinner-size)) / 2);
+    top: calc((var(--message-table-content-height) - var(--spinner-size)) / 2);
+    border: 16px solid var(--vscode-editorSuggestWidget-border);
+    border-radius: 50%;
+    border-top: 16px solid var(--vscode-editorSuggestWidget-foreground);
+    width: var(--spinner-size);
+    height: var(--spinner-size);
+    animation: spin 2s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+/* Service bus send message */
+
+service-bus-send-message {
+    --send-message-size: 750px;
+    --service-bus-send-message-height: 250px;
+    margin: 25px;
+}
+
+service-bus-send-message h3 {
+    text-align: center;
+}
+
+service-bus-send-message article {
+    display: flex;
+    width: var(--send-message-size);
+}
+
+service-bus-send-message article section {
+    width: 100%;
+    margin: 10px;
+}
+
+service-bus-send-message textarea {
+    box-sizing: border-box;
+    padding: 10px;
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+    resize: none;
+    tab-size: 4;
+}
+
+service-bus-send-message input {
+    box-sizing: border-box;
+    width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+service-bus-send-message label {
+    display: block;
+    text-align: center;
+    font-weight: bold;
+    margin: 10px;
+}
+
+service-bus-send-message section div,
+service-bus-send-message section textarea {
+    border: 1px solid;
+    height: var(--service-bus-send-message-height);
+    background-color: var(--vscode-settings-textInputBackground);
+    color: var(--vscode-settings-textInputForeground);
+    overflow: auto;
+}
+
+service-bus-send-message section textarea::placeholder {
+    font-family: var(--vscode-editor-font-family);
+}
+
+service-bus-send-message button {
+    display: block;
+    margin: 0 auto;
+}

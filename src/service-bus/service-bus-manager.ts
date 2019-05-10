@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { QueueService } from '../queues/queue-service';
 import { TopicService } from '../topics/topic-service';
 import { ServiceBusWebviewPanel } from './service-bus-webview-panel';
-import { ServiceBusServicePromise } from './service-bus-service-promise';
+import { ServiceBusApi } from './service-bus-api';
 import { ServiceBusNamespace } from './service-bus-models';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -20,7 +20,7 @@ export class ServiceBusManager {
 
     connectionString: string;
 
-    serviceBusService: ServiceBusServicePromise;
+    serviceBusService: ServiceBusApi;
 
     serviceBusNamespace: ServiceBusNamespace;
 
@@ -29,7 +29,7 @@ export class ServiceBusManager {
         this.connectionString = configuration.connectionString;
         this.webviewPanel = new ServiceBusWebviewPanel(this.context);
         this.serviceBusNamespace = new ServiceBusNamespace(this.connectionString);
-        this.serviceBusService = new ServiceBusServicePromise(this.serviceBusNamespace.connectionString);
+        this.serviceBusService = new ServiceBusApi(this.serviceBusNamespace.connectionString);
         this.queueService = new QueueService(this.serviceBusNamespace, this.serviceBusService, this.webviewPanel);
         this.topicService = new TopicService(this.serviceBusNamespace, this.serviceBusService, this.webviewPanel);
 
