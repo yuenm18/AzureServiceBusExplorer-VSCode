@@ -37,7 +37,7 @@ enum InboundCommand {
     SetUI = 'set-ui',
     SendMessage = 'send-message',
     PeekMessages = 'peek-messages',
-    PeekDeadLetter = 'peek-messages',
+    PeekDeadLetter = 'peek-messages-dead-letter',
 }
 
 /**
@@ -110,6 +110,20 @@ export class ServiceBusWebviewPanel {
     }
 
     /**
+     * Updates the dead letter messages
+     * @param type The service bus entity type
+     * @param entity The service bus entity
+     * @param messages The messages
+     */
+    updateDeadLetterMessages(type: ServiceBusEntityType, entity: ServiceBusEntity, deadLetterMessages: Message[]) {
+        let state = this.states.find(s => ServiceBusUtilities.getEntityId(s.entity) === ServiceBusUtilities.getEntityId(entity));
+        if (state) {
+            state.deadLetterMessages = deadLetterMessages;
+            this.refreshWebview(type, entity);
+        }
+    }
+
+    /**
      * Refreshes the webview if any of the service bus entities are updated
      * @param entities The updated service bus entities
      */
@@ -172,6 +186,20 @@ export class ServiceBusWebviewPanel {
                     }
                     case ServiceBusEntityType.Subscription: {
                         vscode.commands.executeCommand('subscriptions.peek', state.entity, count);
+                        break;
+                    }
+                }
+                break;
+            }
+            case InboundCommand.PeekDeadLetter: {
+                let count = message.data;
+                switch (state.type) {
+                    case ServiceBusEntityType.Queue: {
+                        vscode.commands.executeCommand('queues.peekDeadLetter', state.entity, count);
+                        break;
+                    }
+                    case ServiceBusEntityType.Subscription: {
+                        vscode.commands.executeCommand('subscriptions.peekDeadLetter', state.entity, count);
                         break;
                     }
                 }

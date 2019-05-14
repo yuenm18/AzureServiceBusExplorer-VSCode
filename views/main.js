@@ -80,6 +80,7 @@
 
             let serviceBusMessageTable = document.createElement('service-bus-message-table');
             serviceBusMessageTable.messages = state.messages;
+            serviceBusMessageTable.deadLetterMessages = state.deadLetterMessages;
             let sendMessage = document.createElement('service-bus-send-message');
 
             let json = document.getElementsByTagName('pre')[0];
@@ -149,6 +150,7 @@
 
             let serviceBusMessageTable = document.createElement('service-bus-message-table');
             serviceBusMessageTable.messages = state.messages;
+            serviceBusMessageTable.deadLetterMessages = state.deadLetterMessages;
 
             let json = document.getElementsByTagName('pre')[0];
             json.textContent = JSON.stringify(state.entity, null, 4);
@@ -183,13 +185,13 @@
     class UIUtility {
         static attachUIListener() {
             let uiElements = document.querySelectorAll(`[id^=${serviceBusPrefix}]`);
-            uiElements.forEach(e => e.oninput = () => {
+            uiElements.forEach(e => e.oninput = e.onclick = (e) => {
                 vscode.postMessage({
                     command: 'set-ui',
                     state: state,
                     data: UIUtility.getUIState()
                 });
-            })
+            });
         }
 
         static getUIState() {
@@ -212,6 +214,7 @@
             for (let uiElement of uiElements) {
                 if (uiState[uiElement.id] !== undefined) {
                     uiElement.value = uiState[uiElement.id];
+                    uiElement.setAttribute('value', uiState[uiElement.id]);
                 }
             }
         }
@@ -312,6 +315,12 @@
                 ['Created Date', 'enqueuedTimeUtc'],
                 ['Expires Date', 'expiresAtUtc'],
             ];
+            
+            this.messageTabs = {
+                'Messages' : 'peek-messages',
+                'Dead Letter Queue' : 'peek-messages-dead-letter'
+            };
+
 
             this.render();
         }
@@ -323,7 +332,7 @@
 
             this.render();
         }
-
+        
         render() {
             let title = document.createElement('h3');
             title.textContent = 'View Messages';
@@ -343,10 +352,12 @@
             let peekButton = document.createElement('button');
             peekButton.textContent = 'Peek';
             peekButton.onclick = () => {
+                let activeElement = messageQueueSelector.querySelector('[value="active"]');
+                
                 vscode.postMessage({
-                    command: 'peek-messages',
+                    command: this.messageTabs[activeElement.textContent],
                     state: state,
-                    data: +this.querySelector('input[type=number]').value || undefined
+                    data: +countSelector.value || undefined
                 });
 
                 let spinner = document.createElement('div')
@@ -379,34 +390,38 @@
             tbody.appendChild(tableBody);
             table.append(thead, tbody);
 
+            let messageQueueSelector = document.createElement('section');
+            let messageQueue = document.createElement('div');
+            messageQueue.id = `${serviceBusPrefix}message-queue-tab`;
+            let messageDeadLetterQueue = document.createElement('div');
+            messageDeadLetterQueue.id = `${serviceBusPrefix}message-dead-letter-queue-tab`;
+            messageQueueSelector.classList.add('message-queue-selector');
+            messageQueueSelector.append(messageQueue, messageDeadLetterQueue);
+            messageQueueSelector.addEventListener('click', (e) => {
+                let target = e.target;
+                [].forEach.call(messageQueueSelector.childNodes, n => {
+                    n.value = '';
+                    n.removeAttribute('value');
+                });
+                target.value = 'active';
+                target.setAttribute('value', 'active');
+                this.populateTable(tableBody, target.textContent);
+            }, true);
+            messageQueue.textContent = Object.keys(this.messageTabs)[0];
+            messageDeadLetterQueue.textContent = Object.keys(this.messageTabs)[1];
 
-            // get input properties
-            let messages = this.messages || [];
-
-            if (messages.length) {
-                for (let message of messages) {
-                    let tr = document.createElement('tr');
-                    tr.onclick = () => {
-                        this.showMessage(message);
-                    };
-                    for (let header of this.headers) {
-                        let td = document.createElement('td');
-                        let messageContent = document.createElement('p');
-                        messageContent.classList.add('message-content');
-                        messageContent.textContent = message[header[1]];
-                        td.appendChild(messageContent);
-                        tr.appendChild(td);
-                    }
-
-                    tableBody.append(tr);
+            // set the first messages tabs as default if there is none set after ui restore
+            setTimeout(() => {
+                if (![].some.call(messageQueueSelector.childNodes, n => n.value)) {
+                    messageQueue.value = 'active';
+                    messageQueue.setAttribute('value', 'active');
                 }
-            } else {
-                let noMessages = document.createElement('em');
-                noMessages.textContent = 'No Messages';
-                tableBody.appendChild(noMessages);
-            }
 
-            this.append(title, peekSelector, table);
+                let activeTab = messageQueueSelector.querySelector('[value="active"]');
+                this.populateTable(tableBody, activeTab.textContent);
+            });
+
+            this.append(title, peekSelector, table, messageQueueSelector);
         }
 
         showMessage(message) {
@@ -468,6 +483,50 @@
             messageMainSection.append(messageBodySection, messagePropertiesSection)
             messageDialog.append(messageDetailsSection, messageMainSection);
             this.appendChild(messageDialogContainer);
+        }
+
+        populateTable(tableBody, tabName) {
+            // get input properties
+            let messages;
+            switch (tabName) {
+                case Object.keys(this.messageTabs)[0]: {
+                    messages = this.messages || [];
+                    break;
+                }
+                case Object.keys(this.messageTabs)[1]: {
+                    messages = this.deadLetterMessages || [];
+                    break;
+                }
+            }
+
+            // clear table
+            while (tableBody.firstChild) {
+                tableBody.removeChild(tableBody.firstChild);
+            }
+
+            // populate table
+            if (messages.length) {
+                for (let message of messages) {
+                    let tr = document.createElement('tr');
+                    tr.onclick = () => {
+                        this.showMessage(message);
+                    };
+                    for (let header of this.headers) {
+                        let td = document.createElement('td');
+                        let messageContent = document.createElement('p');
+                        messageContent.classList.add('message-content');
+                        messageContent.textContent = message[header[1]];
+                        td.appendChild(messageContent);
+                        tr.appendChild(td);
+                    }
+
+                    tableBody.append(tr);
+                }
+            } else {
+                let noMessages = document.createElement('em');
+                noMessages.textContent = 'No Messages';
+                tableBody.appendChild(noMessages);
+            }
         }
     }
 

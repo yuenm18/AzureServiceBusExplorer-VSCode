@@ -80,7 +80,7 @@ service-bus-message-table table.message-table {
     width: var(--message-table-size);
     border: 1px solid;
     border-collapse: collapse;
-    background-color: var(--vscode-editorSuggestWidget-background);
+    background-color: var(--vscode-tab-inactiveBackground);
 }
 
 service-bus-message-table table.message-table thead, service-bus-message-table .message-table table{
@@ -107,7 +107,7 @@ service-bus-message-table .message-table tbody tr:nth-child(even){
 }
 
 service-bus-message-table table.message-table thead tr {
-    background-color: var(--vscode-editorSuggestWidget-background);
+    background-color: var(--vscode-tab-inactiveBackground);
 }
 
 service-bus-message-table table.message-table td, service-bus-message-table .message-table th {
@@ -207,7 +207,7 @@ service-bus-message-table .message-dialog-container .message-dialog .message-mai
     border-bottom: 1px solid;
 }
 
-.spinner {
+service-bus-message-table .spinner {
     --spinner-size: 120px;
     position: absolute;
     box-sizing: border-box;
@@ -219,12 +219,29 @@ service-bus-message-table .message-dialog-container .message-dialog .message-mai
     width: var(--spinner-size);
     height: var(--spinner-size);
     animation: spin 2s linear infinite;
-  }
+}
   
-  @keyframes spin {
+@keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-  }
+}
+
+service-bus-message-table .message-queue-selector {
+    margin-top: -1px;
+}
+
+service-bus-message-table .message-queue-selector * {
+    display: inline-block;
+    border: 1px solid;
+    padding: 10px;
+    cursor: pointer;
+}
+
+service-bus-message-table .message-queue-selector [value="active"] {
+    background-color: var(--vscode-tab-inactiveBackground);
+    border-top-color: var(--vscode-tab-inactiveBackground);
+}
+
 
 /* Service bus send message */
 

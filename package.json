@@ -78,6 +78,10 @@
 				"title": "Peek Queue"
 			},
 			{
+				"command": "queues.peekDeadLetter",
+				"title": "Peek Dead Letter Queue"
+			},
+			{
 				"command": "queues.send",
 				"title": "Send Message to Queue"
 			},
@@ -154,12 +158,16 @@
 				"title": "View Subscription"
 			},
 			{
-				"command": "queues.peek",
-				"title": "Peek Queue"
+				"command": "subscriptions.peek",
+				"title": "Peek Subscription"
 			},
 			{
-				"command": "queues.receive",
-				"title": "Recieve Messages from Queue"
+				"command": "subscriptions.peekDeadLetter",
+				"title": "Peek Subscription Dead Letter"
+			},
+			{
+				"command": "subscriptions.receive",
+				"title": "Recieve Messages from Subscription"
 			},
 			{
 				"command": "rules.refresh",

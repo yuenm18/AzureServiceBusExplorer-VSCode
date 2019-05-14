@@ -391,6 +391,27 @@ export class TopicService {
 
 
 	/**
+	 * Peeks messages from the subscription's dead letter queue
+	 * @param subscription The subscription
+	 * @param count The number of messages to peek
+	 */
+	async peekSubscriptionDeadLetterMessages(subscription: Subscription, count?: number) {
+		vscode.window.withProgress({
+			title: `Peeking ${count !== undefined ? count + ' ': ''}message${count === 1 ? '' : 's'} from '${subscription.SubscriptionName}' dead letter`,
+			location: vscode.ProgressLocation.Window
+		}, async (progress, token) => {
+			try {
+				let messages = await this.serviceBusApi.peekSubscriptionDeadLetterMessages(subscription, count);
+				this.webviewPanel.updateDeadLetterMessages(ServiceBusEntityType.Subscription, subscription, messages);
+			} catch (error) {
+				console.warn(error);
+				vscode.window.showErrorMessage(error.message);				
+			}
+		});
+	}
+
+
+	/**
 	 * Retrieves all rules associated with a subscription
 	 * @param subscription The subscription that the rules belong to
 	 */

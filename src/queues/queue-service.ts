@@ -219,4 +219,24 @@ export class QueueService {
 			}
 		});
 	}
+
+	/**
+	 * Peeks messages from the dead letter queue
+	 * @param queue The queue
+	 * @param count The maximum number of messages to peek
+	 */
+	async peekQueueDeadLetterMessages(queue: Queue, count?: number) {
+		vscode.window.withProgress({
+			title: `Peeking ${count !== undefined ? count + ' ': ''}message${count === 1 ? '' : 's'} from '${queue.QueueName}' dead letter`,
+			location: vscode.ProgressLocation.Window
+		}, async (progress, token) => {
+			try {
+				let messages = await this.serviceBusApi.peekQueueDeadLetterMessages(queue, count);
+				this.webviewPanel.updateDeadLetterMessages(ServiceBusEntityType.Queue, queue, messages);
+			} catch (error) {
+				console.warn(error);
+				vscode.window.showErrorMessage(error.message);				
+			}
+		});
+	}
 }
