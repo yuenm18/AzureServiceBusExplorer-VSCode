@@ -56,7 +56,6 @@ export class TopicTreeDataProvider implements vscode.TreeDataProvider<TreeItems>
 export class TopicTreeItem extends vscode.TreeItem {
 	constructor(public topic: Topic) {
 		super(topic.TopicName, vscode.TreeItemCollapsibleState.Collapsed);
-		this.topic = { ...topic };
 		this.command = {
 				command: 'topics.view',
 				title: 'View Topic',
@@ -80,7 +79,6 @@ export class TopicTreeItem extends vscode.TreeItem {
 export class SubscriptionTreeItem extends vscode.TreeItem {
 	constructor(public subscription: Subscription) {
 		super(subscription.SubscriptionName, vscode.TreeItemCollapsibleState.Collapsed);
-		this.subscription = { ...subscription };
 		this.command = {
 				command: 'subscriptions.view',
 				title: 'View Subscription',
@@ -104,7 +102,6 @@ export class SubscriptionTreeItem extends vscode.TreeItem {
 export class RuleTreeItem extends vscode.TreeItem {
 	constructor(public rule: Rule) {
 		super(rule.RuleName, vscode.TreeItemCollapsibleState.None);
-		this.rule = { ...rule };
 		this.command = {
 				command: 'rules.view',
 				title: 'View Rule',

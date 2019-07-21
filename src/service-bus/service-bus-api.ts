@@ -13,18 +13,28 @@ import ListQueuesOptions = Azure.ServiceBus.ListQueuesOptions;
 import ListTopicsOptions = Azure.ServiceBus.ListTopicsOptions;
 import ListSubscriptionsOptions = Azure.ServiceBus.ListSubscriptionsOptions;
 import ListRulesOptions = Azure.ServiceBus.ListRulesOptions;
+import { ServiceBusNamespace } from './service-bus-models';
 
 /**
  * Api methods for ineracting with the service bus
  */
 export class ServiceBusApi {
-    private serviceBusService: ServiceBusService;
-    private serviceBusClient: ServiceBusClient;
-
-    constructor(connectionString: string) {
-        this.serviceBusService = new ServiceBusService(connectionString);
-        this.serviceBusClient = ServiceBusClient.createFromConnectionString(connectionString);
+    private static MaxRecieveCount = 2147483647;
+    
+    _serviceBusClient: ServiceBusClient | undefined;
+    private get serviceBusService(): ServiceBusService {
+        return new ServiceBusService(this.serviceBusNamespace.connectionString);
     }
+
+    private get serviceBusClient(): ServiceBusClient  {
+        if (this._serviceBusClient) {
+            this._serviceBusClient.close();
+        }
+
+        return this._serviceBusClient = ServiceBusClient.createFromConnectionString(this.serviceBusNamespace.connectionString);
+    }
+
+    constructor(private serviceBusNamespace: ServiceBusNamespace) { }
 
     /*
      * Queue Management functions
@@ -246,34 +256,19 @@ export class ServiceBusApi {
         await queueClient.close();
     }
 
-    public async peekQueueMessages(queue: Queue, count = +queue.MessageCount): Promise<SendableMessageInfo[]> {
+    public async peekQueueMessages(queue: Queue, count = ServiceBusApi.MaxRecieveCount): Promise<SendableMessageInfo[]> {
         const queueClient = this.serviceBusClient.createQueueClient(queue.QueueName);
         const messages = await queueClient.peek(count);
         await queueClient.close();
         return messages;
     }
 
-    public async peekQueueDeadLetterMessages(queue: Queue, count = +queue.MessageCount): Promise<SendableMessageInfo[]> {
+    public async peekQueueDeadLetterMessages(queue: Queue, count = ServiceBusApi.MaxRecieveCount): Promise<SendableMessageInfo[]> {
         const deadLetterQueueName = QueueClient.getDeadLetterQueuePath(queue.QueueName);
         const queueClient = this.serviceBusClient.createQueueClient(deadLetterQueueName);
         const messages = await queueClient.peek(count);
         await queueClient.close();
         return messages;
-    }
-
-    public async purgeQueueMessages(queue: Queue, count = +queue.MessageCount): Promise<void> {
-        const queueClient = this.serviceBusClient.createQueueClient(queue.QueueName);
-        const receiver = queueClient.createReceiver(ReceiveMode.receiveAndDelete);
-        await receiver.receiveMessages(count);
-        await queueClient.close();
-    }
-
-    public async purgeQueueDeadLetterMessages(queue: Queue, count = +queue.MessageCount): Promise<void> {
-        const deadLetterQueueName = QueueClient.getDeadLetterQueuePath(queue.QueueName);
-        const queueClient = this.serviceBusClient.createQueueClient(deadLetterQueueName);
-        const receiver = queueClient.createReceiver(ReceiveMode.receiveAndDelete);
-        await receiver.receiveMessages(count);
-        await queueClient.close();
     }
 
     public async sendTopicMessage(topic: Topic, message: SendableMessageInfo): Promise<void> {
@@ -283,33 +278,18 @@ export class ServiceBusApi {
         await topicClient.close();
     }
 
-    public async peekSubscriptionMessages(subscription: Subscription, count = Number.MAX_VALUE): Promise<SendableMessageInfo[]> {
+    public async peekSubscriptionMessages(subscription: Subscription, count = ServiceBusApi.MaxRecieveCount): Promise<SendableMessageInfo[]> {
         const subscriptionClient = this.serviceBusClient.createSubscriptionClient(subscription.TopicName, subscription.SubscriptionName);
         const messages = await subscriptionClient.peek(count);
         await subscriptionClient.close();
         return messages;
     }
 
-    public async peekSubscriptionDeadLetterMessages(subscription: Subscription, count = Number.MAX_VALUE): Promise<SendableMessageInfo[]> {
+    public async peekSubscriptionDeadLetterMessages(subscription: Subscription, count = ServiceBusApi.MaxRecieveCount): Promise<SendableMessageInfo[]> {
         const deadLetterQueueName = QueueClient.getDeadLetterQueuePath(subscription.SubscriptionName);
         const subscriptionClient = this.serviceBusClient.createSubscriptionClient(subscription.TopicName, deadLetterQueueName);
         const messages = await subscriptionClient.peek(count);
         await subscriptionClient.close();
         return messages;
-    }
-
-    public async purgeSubscriptionMessages(subscription: Subscription, count = Number.MAX_VALUE): Promise<void> {
-        const subscriptionClient = this.serviceBusClient.createSubscriptionClient(subscription.TopicName, subscription.SubscriptionName);
-        const receiver = subscriptionClient.createReceiver(ReceiveMode.receiveAndDelete);
-        await receiver.receiveMessages(count);
-        await subscriptionClient.close();
-    }
-
-    public async purgeSubscriptionDeadLetterMessages(subscription: Subscription, count = Number.MAX_VALUE): Promise<void> {
-        const deadLetterQueueName = QueueClient.getDeadLetterQueuePath(subscription.SubscriptionName);
-        const subscriptionClient = this.serviceBusClient.createSubscriptionClient(subscription.SubscriptionName, deadLetterQueueName);
-        const receiver = subscriptionClient.createReceiver(ReceiveMode.receiveAndDelete);
-        await receiver.receiveMessages(count);
-        await subscriptionClient.close();
     }
 }

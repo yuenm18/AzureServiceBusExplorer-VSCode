@@ -38,7 +38,6 @@ export class QueueTreeDataProvider implements vscode.TreeDataProvider<QueueTreeI
 export class QueueTreeItem extends vscode.TreeItem {
 	constructor(public queue: Queue) {
 		super(queue.QueueName, vscode.TreeItemCollapsibleState.None);
-		this.queue = { ...queue };
 		this.command = {
 			command: 'queues.view',
 			title: 'View Queue',

@@ -11,9 +11,7 @@
     window.addEventListener('message', event => {
         const message = event.data;
         ServiceBusManager.processMessage(message);
-    })
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
+    });
 
     /**
      * Service bus manager
@@ -92,9 +90,6 @@
 
             let sendMessage = document.createElement('service-bus-send-message');
 
-            let json = document.getElementsByTagName('pre')[0];
-            json.textContent = JSON.stringify(state.entity, null, 4);
-
             headerSection.appendChild(title);
             detailsSection.appendChild(serviceBusDetails);
             viewMessagesSection.appendChild(serviceBusMessageTable);
@@ -129,9 +124,6 @@
 
             let sendMessage = document.createElement('service-bus-send-message');
 
-            let json = document.getElementsByTagName('pre')[0];
-            json.textContent = JSON.stringify(state.entity, null, 4);
-
             headerSection.appendChild(title);
             detailsSection.appendChild(serviceBusDetails);
             sendMessagesSection.appendChild(sendMessage);
@@ -163,9 +155,6 @@
             serviceBusMessageTable.deadLetterMessages = state.deadLetterMessages;
             serviceBusMessageTable.deadLetterMessagesLastUpdated = state.deadLetterMessagesLastUpdated;
 
-            let json = document.getElementsByTagName('pre')[0];
-            json.textContent = JSON.stringify(state.entity, null, 4);
-
             headerSection.appendChild(title);
             detailsSection.appendChild(serviceBusDetails);
             viewMessagesSection.appendChild(serviceBusMessageTable);
@@ -193,8 +182,6 @@
 
     }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-
     /**
      * UI Utilities
      */
@@ -211,7 +198,7 @@
         }
 
         static getUIState() {
-            // all ui elements we want to save begins with 'service-bus-'
+            // all ui elements we want to save has an id that begins with 'service-bus-'
             let uiElements = document.querySelectorAll(`[id^=${serviceBusPrefix}]`);
             let uiState = {};
             for (let uiElement of uiElements) {
@@ -235,8 +222,6 @@
             }
         }
     }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
      * Service bus send message component
@@ -279,6 +264,7 @@
                     this.selectionEnd = originalSelectionStart + 1;
                 }
             };
+
             messagePropertiesLabel.textContent = 'Message Properties';
             sendMessageButton.textContent = 'Send Message';
             sendMessageButton.onclick = () => {
@@ -316,6 +302,7 @@
                     this.addNewProperty();
                 }
             };
+
             let propertyValue = document.createElement('input');
             propertyValue.placeholder = 'Value';
             propertyValue.id = `${serviceBusPrefix}message-property-value-${this.messagePropertyNumber}`;
@@ -325,8 +312,6 @@
             this.messagePropertyNumber++;
         }
     }
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
      * Service bus message table component
@@ -432,7 +417,6 @@
             // fill in data
             let tableBody = document.createElement('table');
 
-
             tbody.appendChild(tableBody);
             table.append(thead, tbody);
 
@@ -449,10 +433,12 @@
                     n.value = '';
                     n.removeAttribute('value');
                 });
+
                 target.value = 'active';
                 target.setAttribute('value', 'active');
                 this.populateTable(tableBody, target.textContent, lastUpdatedField);
             }, true);
+
             messageQueue.textContent = Object.keys(this.messageTabs)[0];
             messageDeadLetterQueue.textContent = Object.keys(this.messageTabs)[1];
 
@@ -478,6 +464,7 @@
                     this.removeChild(messageDialogContainer);
                 }
             }
+
             let messageDialog = document.createElement('article');
             messageDialog.classList.add('message-dialog');
             messageDialogContainer.appendChild(messageDialog);
@@ -489,6 +476,7 @@
                 ['Created Date', 'enqueuedTimeUtc'],
                 ['Expires Date', 'expiresAtUtc'],
             ];
+
             for (let property of messageDetailProperties) {
                 let detailRow = document.createElement('tr');
                 let label = document.createElement('th');
@@ -515,7 +503,7 @@
             let messageProperties = document.createElement('div');
             messageProperties.classList.add('message-details');
             let propertiesTable = document.createElement('table');
-            for (let propertyKey of Object.keys(message.userProperties)) {
+            for (let propertyKey of Object.keys(message.userProperties || {})) {
                 let propertyRow = document.createElement('tr');
                 let key = document.createElement('th');
                 key.textContent = propertyKey;
@@ -524,6 +512,7 @@
                 propertyRow.append(key, value);
                 propertiesTable.append(propertyRow);
             }
+
             messageProperties.appendChild(propertiesTable);
             messagePropertiesSection.append(messagePropertyLabel, messageProperties);
             messageMainSection.append(messageBodySection, messagePropertiesSection)
@@ -538,12 +527,12 @@
             switch (tabName) {
                 case Object.keys(this.messageTabs)[0]: {
                     messages = this.messages || [];
-                    lastUpdated = this.messagesLastUpdated || 'Never';
+                    lastUpdated = this.messagesLastUpdated ? new Date(this.messagesLastUpdated).toLocaleString() : 'Never';
                     break;
                 }
                 case Object.keys(this.messageTabs)[1]: {
                     messages = this.deadLetterMessages || [];
-                    lastUpdated = this.deadLetterMessagesLastUpdated || 'Never';
+                    lastUpdated = this.deadLetterMessagesLastUpdated ? new Date(this.deadLetterMessagesLastUpdated).toLocaleString() : 'Never';
                     break;
                 }
             }
@@ -560,6 +549,7 @@
                     tr.onclick = () => {
                         this.showMessage(message);
                     };
+
                     for (let header of this.headers) {
                         let td = document.createElement('td');
                         let messageContent = document.createElement('p');
@@ -578,7 +568,7 @@
             }
 
             // last updated time
-            lastUpdatedField.textContent = `Last Updated: ${new Date(lastUpdated).toLocaleString()}`;
+            lastUpdatedField.textContent = `Last Updated: ${lastUpdated}`;
         }
     }
 
@@ -604,6 +594,9 @@
             let entity = this.entity || {};
             let fields = this.fields || [];
 
+            let title = document.createElement('h3');
+            title.textContent = 'Details';
+
             let table = document.createElement('table');
             table.classList.add('details-table');
 
@@ -621,7 +614,7 @@
                 table.append(tr);
             }
 
-            this.appendChild(table);
+            this.append(title, table);
         }
     }
 

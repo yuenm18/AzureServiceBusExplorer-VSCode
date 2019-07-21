@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { ServiceBusEntity, ServiceBusEntityType, Message } from './service-bus-models';
+import { ServiceBusEntity, ServiceBusEntityType, Message, Queue, Topic, Subscription } from './service-bus-models';
 import { ServiceBusUtilities } from './service-bus-utilities';
 
 
@@ -244,7 +244,20 @@ export class ServiceBusWebviewPanel {
             state: state
         };
 
-        this.webviewPanel.webview.postMessage(refreshMessage);
+        let noCircularReferenceMessage = JSON.parse(JSON.stringify(refreshMessage, (() => {
+            const seen = new WeakSet();
+            return (key: string, value: any) => {
+                if (typeof value === 'object' && value !== null) {
+                    if (seen.has(value)) {
+                        return;
+                    }
+                    seen.add(value);
+                }
+                return value;
+            };
+        })()));
+
+        this.webviewPanel.webview.postMessage(noCircularReferenceMessage);
     }
 
     /**
@@ -308,7 +321,6 @@ export class ServiceBusWebviewPanel {
                 <section class="send-messages-section"></section>
             </article>
         </main>
-        <pre></pre>
     </body>
 </html>
 `;

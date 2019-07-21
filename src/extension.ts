@@ -1,5 +1,3 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { ServiceBusManager } from './service-bus/service-bus-manager';
 import { QueueTreeItem } from './queues/queue-provider';
@@ -9,10 +7,6 @@ import { TopicTreeItem, SubscriptionTreeItem, RuleTreeItem } from './topics/topi
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "azure-service-bus-explorer" is now active!');
-
 	let serviceBusManager = new ServiceBusManager(context);
 	let queueService = serviceBusManager.queueService;
 	let topicService = serviceBusManager.topicService;
@@ -46,6 +40,14 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('rules.create', (subscriptionTreeItem: SubscriptionTreeItem) => topicService.createRule(subscriptionTreeItem.subscription)));
 	context.subscriptions.push(vscode.commands.registerCommand('rules.delete', (ruleTreeItem: RuleTreeItem) => topicService.deleteRule(ruleTreeItem.rule)));
 	context.subscriptions.push(vscode.commands.registerCommand('rules.view', (rule: Rule) => topicService.viewRule(rule)));
+
+	context.subscriptions.push(vscode.commands.registerCommand('servicebus.changeConnectionString', async () => await serviceBusManager.updateDefaultConnectionString()));
+
+	let changeConnectionString = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 0);
+	context.subscriptions.push(changeConnectionString);
+	changeConnectionString.command = 'servicebus.changeConnectionString';
+	changeConnectionString.text = 'Change Service Bus Connection';
+	changeConnectionString.show();
 }
 
 // this method is called when your extension is deactivated

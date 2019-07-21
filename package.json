@@ -1,7 +1,7 @@
 {
 	"name": "azure-service-bus-explorer",
 	"displayName": "Azure Service Bus Explorer",
-	"description": "The Azure Service Bus Explorer",
+	"description": "The Azure Service Bus Explorer Extension",
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.33.0"
@@ -196,6 +196,10 @@
 			{
 				"command": "rules.view",
 				"title": "View Rule"
+			},
+			{
+				"command": "servicebus.changeConnectionString",
+				"title": "Change Service Bus Connection"
 			}
 		],
 		"menus": {
@@ -276,11 +280,12 @@
 		},
 		"configuration": [
 			{
-				"title": "JSON Outline",
+				"title": "Azure Service Bus Explorer",
 				"properties": {
-					"jsonOutline.autorefresh": {
-						"type": "boolean",
-						"default": false
+					"azureServiceBusExplorer.connectionString": {
+						"description": "The service bus connection string",
+						"type": "string",
+						"default": ""
 					}
 				}
 			}
@@ -297,6 +302,7 @@
 		"@types/azure-sb": "0.0.35",
 		"@types/mocha": "^2.2.42",
 		"@types/node": "^10.14.13",
+		"@types/vscode": "^1.36.0",
 		"tslint": "^5.18.0",
 		"typescript": "^3.5.3"
 	},

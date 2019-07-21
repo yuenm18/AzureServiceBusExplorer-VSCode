@@ -177,7 +177,7 @@ export class QueueService {
 	 * @param queue The queue to view
 	 */
 	viewQueue(queue: Queue) {
-		this.webviewPanel.showEntity(ServiceBusEntityType.Queue, queue);
+			this.webviewPanel.showEntity(ServiceBusEntityType.Queue, queue);
 	}
 
 	/**

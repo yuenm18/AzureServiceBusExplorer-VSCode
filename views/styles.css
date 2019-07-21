@@ -6,6 +6,13 @@ body {
     align-items: center;
 }
 
+.details-section {
+    width: 750px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
 .main-container {
     display: flex;
     flex-flow: row wrap;
@@ -50,10 +57,13 @@ pre {
 
 service-bus-details {
     --details-table-width: 750px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 service-bus-details .details-table {
-    margin: 125px 25px 0;
+    margin: 25px 25px 0;
 }
 
 service-bus-details .details-header {
