@@ -75,6 +75,14 @@ service-bus-message-table h3 {
     margin: 25px;
 }
 
+service-bus-message-table section.top-bar-section {
+    display: flex;
+}
+
+service-bus-message-table section.top-bar-section .last-accessed {
+    margin-left: auto;
+}
+
 service-bus-message-table table.message-table {
     margin-top: 10px;
     width: var(--message-table-size);

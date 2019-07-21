@@ -13,6 +13,12 @@
         ServiceBusManager.processMessage(message);
     })
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Service bus manager
+     * Handles message received from extension
+     */
     class ServiceBusManager {
         static processMessage(message) {
             state = message.state;
@@ -80,7 +86,10 @@
 
             let serviceBusMessageTable = document.createElement('service-bus-message-table');
             serviceBusMessageTable.messages = state.messages;
+            serviceBusMessageTable.messagesLastUpdated = state.messagesLastUpdated;
             serviceBusMessageTable.deadLetterMessages = state.deadLetterMessages;
+            serviceBusMessageTable.deadLetterMessagesLastUpdated = state.deadLetterMessagesLastUpdated;
+
             let sendMessage = document.createElement('service-bus-send-message');
 
             let json = document.getElementsByTagName('pre')[0];
@@ -150,7 +159,9 @@
 
             let serviceBusMessageTable = document.createElement('service-bus-message-table');
             serviceBusMessageTable.messages = state.messages;
+            serviceBusMessageTable.messagesLastUpdated = state.messagesLastUpdated;
             serviceBusMessageTable.deadLetterMessages = state.deadLetterMessages;
+            serviceBusMessageTable.deadLetterMessagesLastUpdated = state.deadLetterMessagesLastUpdated;
 
             let json = document.getElementsByTagName('pre')[0];
             json.textContent = JSON.stringify(state.entity, null, 4);
@@ -182,6 +193,11 @@
 
     }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * UI Utilities
+     */
     class UIUtility {
         static attachUIListener() {
             let uiElements = document.querySelectorAll(`[id^=${serviceBusPrefix}]`);
@@ -220,7 +236,11 @@
         }
     }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Service bus send message component
+     */
     class ServiceBusSendMessage extends HTMLElement {
         connectedCallback() {
             this.messagePropertyNumber = 0;
@@ -252,7 +272,7 @@
             this.messageBodyInput.placeholder = 'Message Body';
             this.messageBodyInput.id = `${serviceBusPrefix}message-body-input`;
             this.messageBodyInput.onkeydown = function (e) {
-                if (e.key === "Tab") {
+                if (e.key === 'Tab') {
                     e.preventDefault();
                     let originalSelectionStart = this.selectionStart;
                     this.value = this.value.substring(0, this.selectionStart) + '\t' + this.value.substring(this.selectionEnd);
@@ -306,7 +326,11 @@
         }
     }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /**
+     * Service bus message table component
+     */
     class ServiceBusMessageTable extends HTMLElement {
         connectedCallback() {
             this.headers = [
@@ -315,12 +339,11 @@
                 ['Created Date', 'enqueuedTimeUtc'],
                 ['Expires Date', 'expiresAtUtc'],
             ];
-            
-            this.messageTabs = {
-                'Messages' : 'peek-messages',
-                'Dead Letter Queue' : 'peek-messages-dead-letter'
-            };
 
+            this.messageTabs = {
+                'Messages': 'peek-messages',
+                'Dead Letter Queue': 'peek-messages-dead-letter'
+            };
 
             this.render();
         }
@@ -332,28 +355,47 @@
 
             this.render();
         }
-        
+
         render() {
             let title = document.createElement('h3');
             title.textContent = 'View Messages';
 
             // input selector
-            let peekSelector = document.createElement('div');
+            let topBarSection = document.createElement('section');
+            topBarSection.classList.add('top-bar-section');
             let countSelector = document.createElement('input');
-            countSelector.placeholder = 'Number of Messages';
+            countSelector.placeholder = '# of Messages';
             countSelector.type = 'number';
             countSelector.min = 1;
+            countSelector.max = 2147483647;
+            countSelector.value === undefined && (countSelector.value = 10);
             countSelector.id = `${serviceBusPrefix}peek-message-selector`;
             countSelector.onkeydown = (e) => {
-                if (e.key === "Enter") {
+                if (e.key === 'Enter') {
                     peekButton.onclick();
                 }
             }
+
+            countSelector.onkeyup = (e) => {
+                if (countSelector.value === '') {
+                    countSelector.value = '';
+                    return;
+                }
+
+                if (!(countSelector.valueAsNumber <= countSelector.max)) {
+                    countSelector.value = countSelector.max;
+                }
+
+                if (!(countSelector.valueAsNumber >= countSelector.min)) {
+                    countSelector.value = countSelector.min;
+                }
+            }
+
             let peekButton = document.createElement('button');
             peekButton.textContent = 'Peek';
             peekButton.onclick = () => {
                 let activeElement = messageQueueSelector.querySelector('[value="active"]');
-                
+
                 vscode.postMessage({
                     command: this.messageTabs[activeElement.textContent],
                     state: state,
@@ -364,7 +406,11 @@
                 spinner.classList.add('spinner');
                 tbody.appendChild(spinner);
             };
-            peekSelector.append(countSelector, peekButton);
+
+            let lastUpdatedField = document.createElement('span');
+            lastUpdatedField.classList.add('last-accessed');
+
+            topBarSection.append(countSelector, peekButton, lastUpdatedField);
 
             // the actual table
             let table = document.createElement('table');
@@ -405,7 +451,7 @@
                 });
                 target.value = 'active';
                 target.setAttribute('value', 'active');
-                this.populateTable(tableBody, target.textContent);
+                this.populateTable(tableBody, target.textContent, lastUpdatedField);
             }, true);
             messageQueue.textContent = Object.keys(this.messageTabs)[0];
             messageDeadLetterQueue.textContent = Object.keys(this.messageTabs)[1];
@@ -418,10 +464,10 @@
                 }
 
                 let activeTab = messageQueueSelector.querySelector('[value="active"]');
-                this.populateTable(tableBody, activeTab.textContent);
+                this.populateTable(tableBody, activeTab.textContent, lastUpdatedField);
             });
 
-            this.append(title, peekSelector, table, messageQueueSelector);
+            this.append(title, topBarSection, table, messageQueueSelector);
         }
 
         showMessage(message) {
@@ -485,16 +531,19 @@
             this.appendChild(messageDialogContainer);
         }
 
-        populateTable(tableBody, tabName) {
+        populateTable(tableBody, tabName, lastUpdatedField) {
             // get input properties
             let messages;
+            let lastUpdated;
             switch (tabName) {
                 case Object.keys(this.messageTabs)[0]: {
                     messages = this.messages || [];
+                    lastUpdated = this.messagesLastUpdated || 'Never';
                     break;
                 }
                 case Object.keys(this.messageTabs)[1]: {
                     messages = this.deadLetterMessages || [];
+                    lastUpdated = this.deadLetterMessagesLastUpdated || 'Never';
                     break;
                 }
             }
@@ -527,9 +576,17 @@
                 noMessages.textContent = 'No Messages';
                 tableBody.appendChild(noMessages);
             }
+
+            // last updated time
+            lastUpdatedField.textContent = `Last Updated: ${new Date(lastUpdated).toLocaleString()}`;
         }
     }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Service bus details component
+     */
     class ServiceBusDetails extends HTMLElement {
         connectedCallback() {
             this.render();

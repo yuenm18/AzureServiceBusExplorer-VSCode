@@ -65,8 +65,8 @@ export class ServiceBusUtilities {
     
             optionsPicker.buttons = [{
                 iconPath: {
-                    light: path.join(__filename, '..', '..', '..', 'resources', 'icons', 'light', 'create.svg'),
-                    dark: path.join(__filename, '..', '..', '..', 'resources', 'icons', 'dark', 'create.svg')
+                    light: vscode.Uri.parse(path.join(__filename, '..', '..', '..', 'resources', 'icons', 'light', 'create.svg')),
+                    dark: vscode.Uri.parse(path.join(__filename, '..', '..', '..', 'resources', 'icons', 'dark', 'create.svg'))
                 },
     
                 tooltip: `Create ${type}`

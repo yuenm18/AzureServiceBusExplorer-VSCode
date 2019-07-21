@@ -283,14 +283,14 @@ export class ServiceBusApi {
         await topicClient.close();
     }
 
-    public async peekSubscriptionMessages(subscription: Subscription, count = +subscription.MessageCount): Promise<SendableMessageInfo[]> {
+    public async peekSubscriptionMessages(subscription: Subscription, count = Number.MAX_VALUE): Promise<SendableMessageInfo[]> {
         const subscriptionClient = this.serviceBusClient.createSubscriptionClient(subscription.TopicName, subscription.SubscriptionName);
         const messages = await subscriptionClient.peek(count);
         await subscriptionClient.close();
         return messages;
     }
 
-    public async peekSubscriptionDeadLetterMessages(subscription: Subscription, count = +subscription.MessageCount): Promise<SendableMessageInfo[]> {
+    public async peekSubscriptionDeadLetterMessages(subscription: Subscription, count = Number.MAX_VALUE): Promise<SendableMessageInfo[]> {
         const deadLetterQueueName = QueueClient.getDeadLetterQueuePath(subscription.SubscriptionName);
         const subscriptionClient = this.serviceBusClient.createSubscriptionClient(subscription.TopicName, deadLetterQueueName);
         const messages = await subscriptionClient.peek(count);
@@ -298,14 +298,14 @@ export class ServiceBusApi {
         return messages;
     }
 
-    public async purgeSubscriptionMessages(subscription: Subscription, count = +subscription.MessageCount): Promise<void> {
+    public async purgeSubscriptionMessages(subscription: Subscription, count = Number.MAX_VALUE): Promise<void> {
         const subscriptionClient = this.serviceBusClient.createSubscriptionClient(subscription.TopicName, subscription.SubscriptionName);
         const receiver = subscriptionClient.createReceiver(ReceiveMode.receiveAndDelete);
         await receiver.receiveMessages(count);
         await subscriptionClient.close();
     }
 
-    public async purgeSubscriptionDeadLetterMessages(subscription: Subscription, count = +subscription.MessageCount): Promise<void> {
+    public async purgeSubscriptionDeadLetterMessages(subscription: Subscription, count = Number.MAX_VALUE): Promise<void> {
         const deadLetterQueueName = QueueClient.getDeadLetterQueuePath(subscription.SubscriptionName);
         const subscriptionClient = this.serviceBusClient.createSubscriptionClient(subscription.SubscriptionName, deadLetterQueueName);
         const receiver = subscriptionClient.createReceiver(ReceiveMode.receiveAndDelete);
